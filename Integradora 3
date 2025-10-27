@@ -1,0 +1,308 @@
+Incident.java:
+
+package model;
+import java.time.LocalDate;
+
+public class Incident {
+    
+    private LocalDate dateReporte;
+    private String descripcion;
+    private boolean resuelto;
+    private int horaSolucion;
+
+    public Incident(LocalDate dateReporte, String descripcion){
+        this.dateReporte = dateReporte;
+        this.descripcion = descripcion;
+        this.resuelto = false;
+        this.horaSolucion = 0;
+    }
+
+    public LocalDate getDateReport(){
+        return dateReporte;
+    }
+
+    public String getDescripcion(){
+        return descripcion;
+    }
+
+    public boolean getResuelto(){
+        return resuelto;
+    }
+
+    public int getHoraSolucion(){
+        return horaSolucion;
+    }
+    public void setResuelto(boolean resuelto){
+        this.resuelto = resuelto;
+    }
+public void setHoraSolucion(int horaSolucion){
+        this.horaSolucion = horaSolucion;
+    }
+}
+
+Computer.java:
+
+package model;
+
+import java.util.ArrayList;
+
+public class Computer {
+    private String numeroSerial;
+    private boolean enOperacion; 
+    private int piso;
+    private int posicion; 
+    private ArrayList<Incident> incidents;
+
+    public Computer(String numeroSerial, boolean enOperacion, int piso, int posicion) {
+        this.numeroSerial = numeroSerial;
+        this.enOperacion = enOperacion;
+        this.piso = piso;
+        this.posicion = posicion;
+        this.incidents = new ArrayList<>();
+    }
+
+    public void addIncident(Incident incident) {
+        this.incidents.add(incident);
+    }
+
+    // Getters
+    public String getNumeroSerial(){ 
+        return numeroSerial; 
+    }
+    public boolean getEnOperacion(){
+        return enOperacion; 
+    }
+    public int getPiso(){ 
+        return piso; 
+    }
+    public int getPosicion(){ 
+        return posicion; 
+    }
+    public ArrayList<Incident> getIncidents(){ 
+        return incidents; 
+    }
+    public int getIncidentCount(){ return incidents.size(); 
+    }
+
+    // Setters
+    public void setEnOperacion(boolean enOperacion){ 
+        this.enOperacion = enOperacion; 
+    }
+}
+
+
+SchoolController.java:
+package model;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+
+public class SchoolController {
+    private static final int PISOS = 5;
+    private static final int COMPUTERS_POR_PISOS = 10;
+    
+    
+    private Computer[][] computersMatrix;
+    private ArrayList<Computer> computersList;
+    private ArrayList<Incident> allIncidents;
+
+    public SchoolController() {
+        computersMatrix = new Computer[PISOS][COMPUTERS_POR_PISOS];
+        computersList = new ArrayList<>();
+        allIncidents = new ArrayList<>();
+    }
+
+
+    public String agregarComputador(String numeroSerial, int pisoUsuario) {
+        int piso = pisoUsuario - 1;
+        
+        for (Computer computer : computersList) {
+            if (computer.getNumeroSerial().equals(numeroSerial)) {
+                return "Error: El numero de serie ya existe en el sistema.";
+            }
+        }
+                if (piso < 0 || piso >= PISOS) {
+            return "Error: El piso debe estar entre 1 y 5.";
+        }
+        
+    
+        for (int posicion = 0; posicion < COMPUTERS_POR_PISOS; posicion++) {
+            if (computersMatrix[piso][posicion] == null) {
+  
+                Computer computer = new Computer(numeroSerial, true, piso, posicion);
+                
+   
+                computersMatrix[piso][posicion] = computer;
+                computersList.add(computer);
+                
+                return "Computador agregado exitosamente en Piso " + pisoUsuario + ", Posicion " + (posicion + 1);
+            }
+        }
+        
+        return "Error: No hay espacio disponible en el piso " + pisoUsuario;
+    }
+
+    public String agregarIncidenteEnComputador(String numeroSerial, int pisoUsuario, int posicionUsuario, String descripcion) {
+  
+        int piso = pisoUsuario - 1;
+        int posicion = posicionUsuario - 1;
+        
+    
+        if (piso < 0 || piso >= PISOS || posicion < 0 || posicion >= COMPUTERS_POR_PISOS) {
+            return "Error: Ubicacion invalida.";
+        }
+        
+
+        Computer computer = computersMatrix[piso][posicion];
+        
+
+        if (computer == null) {
+            return "Error: No hay computador en esa ubicacion.";
+        }
+        if (!computer.getNumeroSerial().equals(numeroSerial)) {
+            return "Error: El numero de serie no coincide con el computador en esa ubicacion.";
+        }
+
+        Incident incident = new Incident(LocalDate.now(), descripcion);
+        computer.addIncident(incident);
+        allIncidents.add(incident);
+        
+        return "Incidente reportado exitosamente al computador " + numeroSerial;
+    }
+
+  
+    public String consultarComputadorConMasIncidentes() {
+        if (computersList.isEmpty()) {
+            return "No hay computadores registrados en el sistema.";
+        }
+        
+        Computer computadorConMasIncidentes = null;
+        int maxIncidentes = -1;
+        
+        for (Computer computer : computersList) {
+            if (computer.getIncidentCount() > maxIncidentes) {
+                maxIncidentes = computer.getIncidentCount();
+                computadorConMasIncidentes = computer;
+            }
+        }
+        if (computadorConMasIncidentes == null || maxIncidentes == 0) {
+            return "No hay incidentes reportados en ningun computador.";
+        }
+        
+        // Convertir índices internos a números de usuario
+        int pisoUsuario = computadorConMasIncidentes.getPiso() + 1;
+        int posicionUsuario = computadorConMasIncidentes.getPosicion() + 1;
+        
+        return "Computador con mas incidentes:\n" +
+               "Serial: " + computadorConMasIncidentes.getNumeroSerial() + "\n" +
+               "Ubicacion: Piso " + pisoUsuario + ", Posicion " + posicionUsuario + "\n" +
+               "Numero de incidentes: " + maxIncidentes;
+    }
+
+    // Getter para la vista
+    public ArrayList<Computer> getComputerList() {
+        return computersList;
+    }
+}
+
+
+SchoolApp.java:
+package ui;
+
+import java.util.Scanner;
+import model.SchoolController;
+
+public class SchoolApp {
+
+    private Scanner input;
+    private SchoolController controller;
+
+    public static void main(String[] args) {
+        SchoolApp ui = new SchoolApp();
+        ui.menu();
+    }
+
+    // Constructor
+    public SchoolApp() {
+        input = new Scanner(System.in);
+        controller = new SchoolController();
+    }
+
+    public void menu() {
+        System.out.println("Bienvenido a Computaricemos");
+
+         int option = 0;
+        do {
+            System.out.println("\nMenu Principal");
+            System.out.println("--------------------------------------------------------");
+            System.out.println("Digite alguna de las siguientes opciones");
+            System.out.println("1) Registrar computador");
+            System.out.println("2) Registrar incidente en computador");
+            System.out.println("3) Consultar el computador con mas incidentes");
+            System.out.println("0) Salir del sistema");
+            System.out.print("Opcion: ");
+            option = input.nextInt();
+            input.nextLine(); // Limpiar buffer
+
+            switch (option) {
+                case 1:
+                    registrarComputador();
+                    break;
+                case 2:
+                    registrarIncidenteEnComputador();
+                    break;
+                case 3:
+                    consultarComputadorConMasIncidentes();
+                    break;
+                case 0:
+                    System.out.println("\nGracias por usar nuestros servicios. Adios!");
+                    break;
+                default:
+                    System.out.println("\nOpción inválida. Intente nuevamente.");
+                    break;
+            }
+        } while (option != 0);
+        
+        input.close();
+    }
+
+    public void registrarComputador() {
+        System.out.println("\n--- REGISTRAR COMPUTADOR ---");
+        
+        System.out.print("Ingrese el numero de serie (unico): ");
+        String numeroSerial = input.nextLine();
+        
+        System.out.print("Ingrese el piso (1-5): ");
+        int piso = input.nextInt();
+        input.nextLine(); // Limpiar buffer
+        
+        String result = controller.agregarComputador(numeroSerial, piso);
+        System.out.println(result);
+    }
+    public void registrarIncidenteEnComputador() {
+        System.out.println("\n--- REGISTRAR INCIDENTE EN COMPUTADOR ---");
+        
+        System.out.print("Ingrese el numero de serie del computador: ");
+        String numeroSerial = input.nextLine();
+        
+        System.out.print("Ingrese el piso (1-5): ");
+        int piso = input.nextInt();
+        
+        System.out.print("Ingrese la posicion en el piso (1-10): ");
+        int posicion = input.nextInt();
+        input.nextLine(); // Limpiar buffer
+        
+        System.out.print("Ingrese la descripcion del incidente: ");
+        String descripcion = input.nextLine();
+        
+        String result = controller.agregarIncidenteEnComputador(numeroSerial, piso, posicion, descripcion);
+        System.out.println(result);
+    }
+
+    public void consultarComputadorConMasIncidentes() {
+        System.out.println("\n--- COMPUTADOR CON MAS INCIDENTES ---");
+        
+        String result = controller.consultarComputadorConMasIncidentes();
+        System.out.println(result);
+    }
+}
